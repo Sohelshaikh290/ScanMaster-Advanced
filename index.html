@@ -72,7 +72,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             <!-- Left Panel: Controls & Upload -->
-            <div class="lg:col-span-4 space-y-6">
+            <div id="left-panel" class="lg:col-span-4 space-y-6">
                 
                 <!-- Settings Card -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
@@ -128,7 +128,7 @@
             </div>
 
             <!-- Right Panel: Staging & Preview -->
-            <div class="lg:col-span-8 space-y-6">
+            <div id="right-panel" class="lg:col-span-8 space-y-6">
                 
                 <!-- Info Banner -->
                 <div id="welcome-banner" class="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
@@ -335,11 +335,18 @@
 
             // UI Transition
             state.isProcessing = true;
+            
+            // Define layout elements safely by ID
+            const leftPanel = document.getElementById('left-panel');
+            const rightPanel = document.getElementById('right-panel');
+
+            // Hide staging area content
             els.stagingArea.classList.add('hidden');
-            els.dropZone.parentElement.classList.add('hidden'); // Hide left panel content
-            document.querySelector('.lg\\:col-span-4').classList.add('hidden'); // Hide entire left col
-            document.querySelector('.lg\\:col-span-8').classList.remove('lg:col-span-8'); // Expand right col
-            document.querySelector('.lg\\:col-span-8').classList.add('w-full', 'max-w-2xl', 'mx-auto'); // Center it
+            
+            // Adjust Panels
+            leftPanel.classList.add('hidden');
+            rightPanel.classList.remove('lg:col-span-8');
+            rightPanel.classList.add('lg:col-span-12', 'w-full', 'max-w-2xl', 'mx-auto');
             
             els.processingView.classList.remove('hidden');
 
