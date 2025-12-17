@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro ScanMaster: Advanced OCR</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tesseract.js (OCR) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    
+    <!-- jsPDF (PDF Generator) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- PDF.js (PDF Input Reader) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script>
+        // Set PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .drag-active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        /* Hide scrollbar for gallery */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="bg-blue-600 text-white p-1.5 rounded-lg mr-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight text-slate-900">ScanMaster <span class="text-blue-600">Advanced</span></span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">Client-Side Only</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-6xl">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Panel: Controls & Upload -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Settings Card -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-slate-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Configuration
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Document Language</label>
+                            <select id="lang-select" class="block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border">
+                                <option value="eng">English</option>
+                                <option value="spa">Spanish</option>
+                                <option value="fra">French</option>
+                                <option value="deu">German</option>
+                                <option value="hin">Hindi</option>
+                                <option value="jpn">Japanese</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="preprocess-check" type="checkbox" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-slate-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="preprocess-check" class="font-medium text-slate-700">Enhance Contrast</label>
+                                <p class="text-slate-500 text-xs">Converts image to high-contrast B&W for OCR (Output PDF remains colored).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Zone -->
+                <div id="drop-zone" class="relative group cursor-pointer">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+                    <div class="relative bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-500 transition-all duration-300 flex flex-col items-center justify-center min-h-[240px]">
+                        
+                        <input type="file" id="file-input" class="hidden" multiple accept="image/png, image/jpeg, image/jpg, application/pdf">
+                        
+                        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path></svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-slate-800">Add Documents</h3>
+                        <p class="text-slate-500 text-xs mt-1">Images (PNG/JPG) or PDFs</p>
+                    </div>
+                </div>
+
+                <button id="convert-btn" disabled class="w-full py-3 px-4 bg-slate-300 text-white font-medium rounded-lg shadow-sm cursor-not-allowed transition-all flex items-center justify-center">
+                    <span>Start Processing</span>
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+
+            <!-- Right Panel: Staging & Preview -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Info Banner -->
+                <div id="welcome-banner" class="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
+                    <h2 class="text-blue-900 font-semibold text-lg mb-2">Ready to Digitize?</h2>
+                    <p class="text-blue-700 text-sm">Upload your files on the left. We support multi-page PDFs and bulk images. <br>The result will be a single, searchable PDF document.</p>
+                </div>
+
+                <!-- Staging Grid -->
+                <div id="staging-area" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-800 text-lg">Document Pages <span id="page-count" class="text-sm font-normal text-slate-500 ml-2">(0 pages)</span></h3>
+                        <button id="clear-all-btn" class="text-xs text-red-500 hover:text-red-700 font-medium">Clear All</button>
+                    </div>
+                    
+                    <div id="pages-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- Thumbnails injected here -->
+                    </div>
+                </div>
+
+                <!-- Progress Overlay -->
+                <div id="processing-view" class="hidden bg-white border border-slate-200 rounded-xl p-8 text-center shadow-lg">
+                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse-slow">
+                        <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                    <h3 id="process-status" class="text-xl font-bold text-slate-800 mb-2">Initializing...</h3>
+                    <p id="process-detail" class="text-slate-500 text-sm mb-6">Preparing engines...</p>
+                    
+                    <div class="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden">
+                        <div id="total-progress" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>Overall Progress</span>
+                        <span id="progress-text">0%</span>
+                    </div>
+                </div>
+
+                <!-- Success View -->
+                <div id="success-view" class="hidden bg-green-50 border border-green-100 rounded-xl p-8 text-center">
+                    <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Done!</h3>
+                    <p class="text-slate-600 mb-6">Your document has been compiled and OCR'd successfully.</p>
+                    
+                    <button id="download-result-btn" class="inline-flex items-center px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg shadow transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Searchable PDF
+                    </button>
+                    
+                    <div class="mt-4">
+                        <button id="reset-app-btn" class="text-sm text-slate-500 hover:text-slate-700 underline">Start New Document</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            pages: [], // Array of { id, dataUrl, width, height }
+            isProcessing: false
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            dropZone: document.getElementById('drop-zone'),
+            fileInput: document.getElementById('file-input'),
+            convertBtn: document.getElementById('convert-btn'),
+            stagingArea: document.getElementById('staging-area'),
+            pagesGrid: document.getElementById('pages-grid'),
+            pageCount: document.getElementById('page-count'),
+            welcomeBanner: document.getElementById('welcome-banner'),
+            processingView: document.getElementById('processing-view'),
+            successView: document.getElementById('success-view'),
+            statusTitle: document.getElementById('process-status'),
+            statusDetail: document.getElementById('process-detail'),
+            progressBar: document.getElementById('total-progress'),
+            progressText: document.getElementById('progress-text'),
+            downloadBtn: document.getElementById('download-result-btn'),
+            resetBtn: document.getElementById('reset-app-btn'),
+            clearAllBtn: document.getElementById('clear-all-btn'),
+            langSelect: document.getElementById('lang-select'),
+            preprocessCheck: document.getElementById('preprocess-check')
+        };
+
+        let generatedPdfBlob = null;
+
+        // --- Event Listeners ---
+        els.dropZone.addEventListener('click', () => els.fileInput.click());
+        els.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); els.dropZone.classList.add('drag-active'); });
+        els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('drag-active'));
+        els.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            els.dropZone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+        });
+        els.fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files);
+        });
+        els.clearAllBtn.addEventListener('click', resetState);
+        els.resetBtn.addEventListener('click', resetState);
+        els.convertBtn.addEventListener('click', startBatchConversion);
+        els.downloadBtn.addEventListener('click', downloadPDF);
+
+        // --- Core Logic ---
+
+        async function handleFiles(fileList) {
+            // Show loading indicator in button if needed, but for now just process
+            els.welcomeBanner.classList.add('hidden');
+            els.stagingArea.classList.remove('hidden');
+
+            for (let file of fileList) {
+                if (file.type === 'application/pdf') {
+                    await processPDFInput(file);
+                } else if (file.type.startsWith('image/')) {
+                    await processImageInput(file);
+                }
+            }
+            updateUI();
+        }
+
+        function processImageInput(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        addPageToState(e.target.result, img.width, img.height);
+                        resolve();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function processPDFInput(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 2.0 }); // Scale 2.0 for better OCR quality
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                
+                addPageToState(canvas.toDataURL('image/jpeg', 0.8), viewport.width, viewport.height);
+            }
+        }
+
+        function addPageToState(dataUrl, width, height) {
+            const id = Date.now() + Math.random().toString(16).slice(2);
+            state.pages.push({ id, dataUrl, width, height });
+            
+            // Add thumbnail to grid
+            const div = document.createElement('div');
+            div.className = 'relative group aspect-[3/4] bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shadow-sm';
+            div.id = `thumb-${id}`;
+            div.innerHTML = `
+                <img src="${dataUrl}" class="w-full h-full object-contain">
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all">
+                    <button onclick="removePage('${id}')" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                    <div class="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100">
+                        Page ${state.pages.length}
+                    </div>
+                </div>
+            `;
+            els.pagesGrid.appendChild(div);
+        }
+
+        window.removePage = function(id) {
+            state.pages = state.pages.filter(p => p.id !== id);
+            document.getElementById(`thumb-${id}`).remove();
+            updateUI();
+        }
+
+        function updateUI() {
+            els.pageCount.textContent = `(${state.pages.length} pages)`;
+            if (state.pages.length > 0) {
+                els.convertBtn.disabled = false;
+                els.convertBtn.classList.remove('bg-slate-300', 'cursor-not-allowed');
+                els.convertBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+            } else {
+                els.convertBtn.disabled = true;
+                els.convertBtn.classList.add('bg-slate-300', 'cursor-not-allowed');
+                els.convertBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                els.stagingArea.classList.add('hidden');
+                els.welcomeBanner.classList.remove('hidden');
+            }
+        }
+
+        async function startBatchConversion() {
+            if (state.pages.length === 0) return;
+
+            // UI Transition
+            state.isProcessing = true;
+            els.stagingArea.classList.add('hidden');
+            els.dropZone.parentElement.classList.add('hidden'); // Hide left panel content
+            document.querySelector('.lg\\:col-span-4').classList.add('hidden'); // Hide entire left col
+            document.querySelector('.lg\\:col-span-8').classList.remove('lg:col-span-8'); // Expand right col
+            document.querySelector('.lg\\:col-span-8').classList.add('w-full', 'max-w-2xl', 'mx-auto'); // Center it
+            
+            els.processingView.classList.remove('hidden');
+
+            try {
+                // 1. Initialize Tesseract Worker
+                els.statusTitle.textContent = "Loading Engine";
+                const lang = els.langSelect.value;
+                const worker = await Tesseract.createWorker();
+                await worker.loadLanguage(lang);
+                await worker.initialize(lang);
+
+                // 2. Initialize jsPDF
+                const { jsPDF } = window.jspdf;
+                let pdf = null; // Will init on first page to match dimensions
+
+                // 3. Loop Pages
+                const total = state.pages.length;
+                
+                for (let i = 0; i < total; i++) {
+                    const page = state.pages[i];
+                    els.statusTitle.textContent = `Processing Page ${i + 1} of ${total}`;
+                    
+                    // --- Preprocessing (Optional) ---
+                    let imageToOCR = page.dataUrl;
+                    if (els.preprocessCheck.checked) {
+                        els.statusDetail.textContent = "Enhancing contrast...";
+                        imageToOCR = await preprocessImage(page.dataUrl);
+                    }
+
+                    // --- OCR ---
+                    els.statusDetail.textContent = "Recognizing text...";
+                    const { data } = await worker.recognize(imageToOCR);
+                    
+                    // Update Progress Bar (weighted logic)
+                    const percent = Math.round(((i + 1) / total) * 100);
+                    els.progressBar.style.width = `${percent}%`;
+                    els.progressText.textContent = `${percent}%`;
+
+                    // --- PDF Generation ---
+                    els.statusDetail.textContent = "Composing PDF...";
+                    
+                    // Init PDF if first page
+                    if (i === 0) {
+                        const orientation = page.width > page.height ? 'l' : 'p';
+                        pdf = new jsPDF({
+                            orientation: orientation,
+                            unit: 'px',
+                            format: [page.width, page.height]
+                        });
+                    } else {
+                        // Add new page matching current image dimensions
+                        pdf.addPage([page.width, page.height], page.width > page.height ? 'l' : 'p');
+                    }
+
+                    // A. Add Visual Image (The Original, NOT the preprocessed one)
+                    pdf.addImage(page.dataUrl, 'JPEG', 0, 0, page.width, page.height);
+
+                    // B. Add Invisible Text Layer
+                    pdf.setTextColor(255, 255, 255); // We'll try to use render mode 3 via custom code if possible, or small white text
+                    
+                    data.words.forEach(word => {
+                        const { bbox, text } = word;
+                        const fontSize = bbox.y1 - bbox.y0; // Height of word
+                        
+                        // Check for valid dimensions to avoid PDF errors
+                        if (fontSize > 0 && text.trim().length > 0) {
+                            pdf.setFontSize(fontSize);
+                            
+                            // Advanced: Invisible Render Mode (Tr 3)
+                            // This makes text completely invisible but selectable
+                            pdf.advancedAPI(doc => {
+                                doc.saveGraphicsState();
+                                doc.setGState(new doc.GState({ opacity: 0 }));
+                                doc.text(text, bbox.x0, bbox.y1, { baseline: 'bottom' });
+                                doc.restoreGraphicsState();
+                            });
+                        }
+                    });
+                }
+
+                // 4. Finalize
+                els.statusTitle.textContent = "Finalizing";
+                els.statusDetail.textContent = "Compressing file...";
+                await worker.terminate();
+                
+                generatedPdfBlob = pdf.output('blob');
+
+                // UI Transition
+                els.processingView.classList.add('hidden');
+                els.successView.classList.remove('hidden');
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+                location.reload(); // Simple reset on error
+            }
+        }
+
+        // --- Helper: Image Preprocessing ---
+        function preprocessImage(dataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imgData.data;
+                    
+                    // Simple Binarization / High Contrast
+                    // Loop through pixels
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        // Grayscale
+                        const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                        // Threshold (Simple)
+                        const val = gray > 128 ? 255 : 0;
+                        
+                        data[i] = val;
+                        data[i + 1] = val;
+                        data[i + 2] = val;
+                    }
+                    
+                    ctx.putImageData(imgData, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        function downloadPDF() {
+            if (generatedPdfBlob) {
+                const url = URL.createObjectURL(generatedPdfBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `searchable_document_${Date.now()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        }
+
+        function resetState() {
+            if(confirm("Are you sure you want to clear all pages?")) {
+                location.reload();
+            }
+        }
+
+    </script>
+</body>
+</html>
